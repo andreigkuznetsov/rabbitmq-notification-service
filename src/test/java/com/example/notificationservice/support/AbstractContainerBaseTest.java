@@ -35,7 +35,7 @@ public abstract class AbstractContainerBaseTest {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("spring.flyway.enabled", () -> true);
 
-        registry.add("app.retry.email-retry-delay-ms", () -> 1000L);
+        registry.add("app.retry.email-retry-delay-ms", () -> 500L);
         registry.add("app.retry.max-attempts", () -> 3);
     }
 }

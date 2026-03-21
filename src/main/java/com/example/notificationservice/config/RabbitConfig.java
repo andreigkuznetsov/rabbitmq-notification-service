@@ -49,4 +49,9 @@ public class RabbitConfig {
     public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
     }
+
+    @Bean
+    public Queue emailDlqQueue(RabbitTopologyProperties properties) {
+        return QueueBuilder.durable(properties.getEmailDlqQueue()).build();
+    }
 }

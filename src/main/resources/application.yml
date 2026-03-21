@@ -40,6 +40,7 @@ app:
     email-routing-key: notification.email
     email-retry-queue: email.retry.queue
     email-retry-routing-key: notification.email.retry
+    email-dlq-queue: email.dlq.queue
 
   retry:
     max-attempts: 3

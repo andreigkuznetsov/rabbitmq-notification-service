@@ -30,4 +30,8 @@ public class NotificationPublisher {
     public void publishToEmailRetry(NotificationMessage message) {
         rabbitTemplate.convertAndSend("", properties.getEmailRetryQueue(), message);
     }
+
+    public void publishToEmailDlq(NotificationMessage message) {
+        rabbitTemplate.convertAndSend("", properties.getEmailDlqQueue(), message);
+    }
 }

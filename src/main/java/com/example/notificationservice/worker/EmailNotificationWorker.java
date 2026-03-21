@@ -71,6 +71,7 @@ public class EmailNotificationWorker {
                 );
             } else {
                 notificationStatusService.markFailed(entity, "RETRY_EXHAUSTED", ex.getMessage());
+                notificationPublisher.publishToEmailDlq(message);
 
                 log.error(
                         "Retry attempts exhausted. notificationId={}, error={}",
@@ -78,15 +79,6 @@ public class EmailNotificationWorker {
                         ex.getMessage()
                 );
             }
-        } catch (Exception ex) {
-            notificationStatusService.markFailed(entity, "EMAIL_PROVIDER_ERROR", ex.getMessage());
-
-            log.error(
-                    "Notification processing failed. notificationId={}, error={}",
-                    message.getNotificationId(),
-                    ex.getMessage(),
-                    ex
-            );
         }
     }
 }
