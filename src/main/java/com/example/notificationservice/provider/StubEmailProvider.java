@@ -1,6 +1,7 @@
 package com.example.notificationservice.provider;
 
 import com.example.notificationservice.dto.NotificationMessage;
+import com.example.notificationservice.exception.RetryableProviderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,10 @@ public class StubEmailProvider implements EmailProvider {
 
     @Override
     public void send(NotificationMessage message) {
+        if ("FORCE_RETRY".equals(message.getTemplateCode())) {
+            throw new RetryableProviderException("Temporary email provider failure");
+        }
+
         log.info(
                 "Stub email sent. notificationId={}, recipient={}, templateCode={}",
                 message.getNotificationId(),

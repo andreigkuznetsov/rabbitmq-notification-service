@@ -12,5 +12,6 @@ public class RabbitTopologyProperties {
     private String exchange;
     private String emailQueue;
     private String emailRoutingKey;
-
+    private String emailRetryQueue;
+    private String emailRetryRoutingKey;
 }

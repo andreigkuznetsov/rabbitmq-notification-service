@@ -34,6 +34,16 @@ public class NotificationStatusService {
     }
 
     @Transactional
+    public void markRetry(NotificationEntity entity, String errorCode, String errorMessage) {
+        entity.setStatus(NotificationStatus.RETRY);
+        entity.setRetryCount(entity.getRetryCount() + 1);
+        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setErrorCode(errorCode);
+        entity.setErrorMessage(errorMessage);
+        notificationRepository.save(entity);
+    }
+
+    @Transactional
     public void markFailed(NotificationEntity entity, String errorCode, String errorMessage) {
         entity.setStatus(NotificationStatus.FAILED);
         entity.setUpdatedAt(LocalDateTime.now());

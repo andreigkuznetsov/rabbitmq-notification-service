@@ -3,7 +3,7 @@ spring:
     name: notification-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/notifications
+    url: jdbc:postgresql://localhost:5433/notifications
     username: postgres
     password: postgres
 
@@ -38,3 +38,9 @@ app:
     exchange: notification.exchange
     email-queue: email.queue
     email-routing-key: notification.email
+    email-retry-queue: email.retry.queue
+    email-retry-routing-key: notification.email.retry
+
+  retry:
+    max-attempts: 3
+    email-retry-delay-ms: 5000

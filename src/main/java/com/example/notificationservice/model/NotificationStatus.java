@@ -5,5 +5,6 @@ public enum NotificationStatus {
     QUEUED,
     PROCESSING,
     SENT,
+    RETRY,
     FAILED
 }

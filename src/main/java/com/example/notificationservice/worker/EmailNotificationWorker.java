@@ -1,11 +1,13 @@
 package com.example.notificationservice.worker;
 
-import com.example.notificationservice.config.RabbitTopologyProperties;
+import com.example.notificationservice.config.RetryProperties;
 import com.example.notificationservice.dto.NotificationMessage;
 import com.example.notificationservice.entity.NotificationEntity;
+import com.example.notificationservice.exception.RetryableProviderException;
 import com.example.notificationservice.provider.EmailProvider;
 import com.example.notificationservice.repository.NotificationRepository;
 import com.example.notificationservice.service.NotificationStatusService;
+import com.example.notificationservice.messaging.NotificationPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,15 +21,21 @@ public class EmailNotificationWorker {
     private final NotificationRepository notificationRepository;
     private final NotificationStatusService notificationStatusService;
     private final EmailProvider emailProvider;
+    private final NotificationPublisher notificationPublisher;
+    private final RetryProperties retryProperties;
 
     public EmailNotificationWorker(
             NotificationRepository notificationRepository,
             NotificationStatusService notificationStatusService,
-            EmailProvider emailProvider
+            EmailProvider emailProvider,
+            NotificationPublisher notificationPublisher,
+            RetryProperties retryProperties
     ) {
         this.notificationRepository = notificationRepository;
         this.notificationStatusService = notificationStatusService;
         this.emailProvider = emailProvider;
+        this.notificationPublisher = notificationPublisher;
+        this.retryProperties = retryProperties;
     }
 
     @RabbitListener(queues = "${app.rabbit.email-queue}")
@@ -50,6 +58,26 @@ public class EmailNotificationWorker {
                     message.getNotificationId(),
                     message.getChannel()
             );
+        } catch (RetryableProviderException ex) {
+            if (entity.getRetryCount() + 1 <= retryProperties.getMaxAttempts()) {
+                notificationStatusService.markRetry(entity, "RETRYABLE_PROVIDER_ERROR", ex.getMessage());
+                notificationPublisher.publishToEmailRetry(message);
+
+                log.warn(
+                        "Notification scheduled for retry. notificationId={}, retryCount={}, error={}",
+                        message.getNotificationId(),
+                        entity.getRetryCount() + 1,
+                        ex.getMessage()
+                );
+            } else {
+                notificationStatusService.markFailed(entity, "RETRY_EXHAUSTED", ex.getMessage());
+
+                log.error(
+                        "Retry attempts exhausted. notificationId={}, error={}",
+                        message.getNotificationId(),
+                        ex.getMessage()
+                );
+            }
         } catch (Exception ex) {
             notificationStatusService.markFailed(entity, "EMAIL_PROVIDER_ERROR", ex.getMessage());
 

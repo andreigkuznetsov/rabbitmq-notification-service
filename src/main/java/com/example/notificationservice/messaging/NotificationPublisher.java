@@ -26,4 +26,8 @@ public class NotificationPublisher {
         String routingKey = routingKeyResolver.resolve(message.getChannel());
         rabbitTemplate.convertAndSend(properties.getExchange(), routingKey, message);
     }
+
+    public void publishToEmailRetry(NotificationMessage message) {
+        rabbitTemplate.convertAndSend("", properties.getEmailRetryQueue(), message);
+    }
 }
