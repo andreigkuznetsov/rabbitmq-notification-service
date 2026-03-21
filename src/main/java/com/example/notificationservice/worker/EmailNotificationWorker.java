@@ -4,10 +4,10 @@ import com.example.notificationservice.config.RetryProperties;
 import com.example.notificationservice.dto.NotificationMessage;
 import com.example.notificationservice.entity.NotificationEntity;
 import com.example.notificationservice.exception.RetryableProviderException;
+import com.example.notificationservice.messaging.NotificationPublisher;
 import com.example.notificationservice.provider.EmailProvider;
 import com.example.notificationservice.repository.NotificationRepository;
 import com.example.notificationservice.service.NotificationStatusService;
-import com.example.notificationservice.messaging.NotificationPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -79,6 +79,15 @@ public class EmailNotificationWorker {
                         ex.getMessage()
                 );
             }
+        } catch (Exception ex) {
+            notificationStatusService.markFailed(entity, "EMAIL_PROVIDER_ERROR", ex.getMessage());
+
+            log.error(
+                    "Notification processing failed. notificationId={}, error={}",
+                    message.getNotificationId(),
+                    ex.getMessage(),
+                    ex
+            );
         }
     }
 }

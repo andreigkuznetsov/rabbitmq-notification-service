@@ -71,9 +71,14 @@ class NotificationDlqE2ETest extends BaseE2ETest {
                     assertThat(entity.getErrorCode()).isEqualTo("RETRY_EXHAUSTED");
                 });
 
-        Message dlqMessage = rabbitTemplate.receive("email.dlq.queue", 5000);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(300))
+                .untilAsserted(() -> {
+                    Message dlqMessage = rabbitTemplate.receive("email.dlq.queue", 1000);
 
-        assertThat(dlqMessage).isNotNull();
-        assertThat(new String(dlqMessage.getBody())).contains(notificationId);
+                    assertThat(dlqMessage).isNotNull();
+                    assertThat(new String(dlqMessage.getBody())).contains(notificationId);
+                });
     }
 }
