@@ -5,6 +5,7 @@ import com.example.notificationservice.exception.NotificationValidationException
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import com.example.notificationservice.exception.DuplicateNotificationException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -45,6 +46,17 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal server error",
+                ex.getMessage(),
+                null
+        );
+    }
+
+    @ExceptionHandler(DuplicateNotificationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDuplicateNotification(DuplicateNotificationException ex) {
+        return new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Duplicate notification",
                 ex.getMessage(),
                 null
         );

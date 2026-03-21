@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.notificationservice.exception.DuplicateNotificationException;
 
 import java.time.LocalDateTime;
 
@@ -37,6 +38,12 @@ public class NotificationService {
     @Transactional
     public CreateNotificationResponse createNotification(CreateNotificationRequest request) {
         validationService.validate(request);
+
+        if (notificationRepository.existsByNotificationId(request.getNotificationId())) {
+            throw new DuplicateNotificationException(
+                    "Notification already exists: " + request.getNotificationId()
+            );
+        }
 
         NotificationEntity entity = new NotificationEntity();
         entity.setNotificationId(request.getNotificationId());
