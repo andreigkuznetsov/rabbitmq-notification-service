@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.example.notificationservice.model.TestTemplateCodes.FAIL_ONCE_THEN_SUCCESS;
+import static com.example.notificationservice.model.TestTemplateCodes.FORCE_RETRY;
+
 @Component
 public class StubEmailProvider implements EmailProvider {
 
@@ -18,11 +21,11 @@ public class StubEmailProvider implements EmailProvider {
 
     @Override
     public void send(NotificationMessage message) {
-        if ("FORCE_RETRY".equals(message.getTemplateCode())) {
+        if (FORCE_RETRY.equals(message.getTemplateCode())) {
             throw new RetryableProviderException("Temporary email provider failure");
         }
 
-        if ("FAIL_ONCE_THEN_SUCCESS".equals(message.getTemplateCode())
+        if (FAIL_ONCE_THEN_SUCCESS.equals(message.getTemplateCode())
                 && failOnceProcessedNotificationIds.add(message.getNotificationId())) {
             throw new RetryableProviderException("Temporary email provider failure on first attempt");
         }

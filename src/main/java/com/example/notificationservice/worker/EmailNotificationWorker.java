@@ -13,6 +13,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import static com.example.notificationservice.model.NotificationErrorCode.EMAIL_PROVIDER_ERROR;
+import static com.example.notificationservice.model.NotificationErrorCode.RETRYABLE_PROVIDER_ERROR;
+import static com.example.notificationservice.model.NotificationErrorCode.RETRY_EXHAUSTED;
+
 @Component
 public class EmailNotificationWorker {
 
@@ -60,7 +64,7 @@ public class EmailNotificationWorker {
             );
         } catch (RetryableProviderException ex) {
             if (entity.getRetryCount() + 1 <= retryProperties.getMaxAttempts()) {
-                notificationStatusService.markRetry(entity, "RETRYABLE_PROVIDER_ERROR", ex.getMessage());
+                notificationStatusService.markRetry(entity, RETRYABLE_PROVIDER_ERROR.name(), ex.getMessage());
                 notificationPublisher.publishToEmailRetry(message);
 
                 log.warn(
@@ -70,7 +74,7 @@ public class EmailNotificationWorker {
                         ex.getMessage()
                 );
             } else {
-                notificationStatusService.markFailed(entity, "RETRY_EXHAUSTED", ex.getMessage());
+                notificationStatusService.markFailed(entity, RETRY_EXHAUSTED.name(), ex.getMessage());
                 notificationPublisher.publishToEmailDlq(message);
 
                 log.error(
@@ -80,7 +84,7 @@ public class EmailNotificationWorker {
                 );
             }
         } catch (Exception ex) {
-            notificationStatusService.markFailed(entity, "EMAIL_PROVIDER_ERROR", ex.getMessage());
+            notificationStatusService.markFailed(entity, EMAIL_PROVIDER_ERROR.name(), ex.getMessage());
 
             log.error(
                     "Notification processing failed. notificationId={}, error={}",

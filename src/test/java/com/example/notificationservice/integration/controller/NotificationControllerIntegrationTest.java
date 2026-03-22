@@ -3,58 +3,32 @@ package com.example.notificationservice.integration.controller;
 import com.example.notificationservice.entity.NotificationEntity;
 import com.example.notificationservice.integration.BaseIntegrationTest;
 import com.example.notificationservice.model.NotificationStatus;
-import com.example.notificationservice.repository.NotificationRepository;
+import com.example.notificationservice.support.TestDataFactory;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
+import static com.example.notificationservice.model.TestTemplateCodes.ORDER_CREATED;
+import static com.example.notificationservice.model.TestTemplateCodes.QUEUED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class NotificationControllerIntegrationTest extends BaseIntegrationTest {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    private NotificationRepository notificationRepository;
-
     @Test
     void shouldAcceptRequestAndCreateNotificationRecord() {
-        String notificationId = "NTF-" + UUID.randomUUID();
+        String notificationId = TestDataFactory.randomNotificationId();
+        Map<String, Object> requestBody =
+                TestDataFactory.emailRequestBody(notificationId, ORDER_CREATED);
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", "ORD-555");
-        payload.put("amount", 1200);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("notificationId", notificationId);
-        requestBody.put("userId", "USR-77");
-        requestBody.put("channel", "EMAIL");
-        requestBody.put("recipient", "user@example.com");
-        requestBody.put("templateCode", "ORDER_CREATED");
-        requestBody.put("payload", payload);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                "/api/v1/notifications",
-                request,
-                String.class
-        );
+        ResponseEntity<String> response = notificationClient.createNotification(requestBody);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody()).contains(notificationId);
-        assertThat(response.getBody()).contains("QUEUED");
+        assertThat(response.getBody()).contains(QUEUED);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(5))

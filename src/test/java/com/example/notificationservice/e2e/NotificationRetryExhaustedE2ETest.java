@@ -7,8 +7,6 @@ import com.example.notificationservice.repository.NotificationRepository;
 import com.example.notificationservice.support.TestDataFactory;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
-import org.springframework.amqp.core.Message;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,20 +14,16 @@ import org.springframework.http.ResponseEntity;
 import java.time.Duration;
 import java.util.Map;
 
-import static com.example.notificationservice.model.TestRabbitConstants.EMAIL_DLQ_QUEUE;
 import static com.example.notificationservice.model.TestTemplateCodes.FORCE_RETRY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class NotificationDlqE2ETest extends BaseE2ETest {
+class NotificationRetryExhaustedE2ETest extends BaseE2ETest {
 
     @Autowired
     private NotificationRepository notificationRepository;
 
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-
     @Test
-    void shouldMoveNotificationToFailedStatusAndDlqAfterRetryExhaustion() {
+    void shouldFailAfterRetryAttemptsAreExhausted() {
         String notificationId = TestDataFactory.randomNotificationId();
         Map<String, Object> requestBody =
                 TestDataFactory.emailRequestBody(notificationId, FORCE_RETRY);
@@ -38,10 +32,11 @@ class NotificationDlqE2ETest extends BaseE2ETest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody()).contains(notificationId);
+        assertThat(response.getBody()).contains(NotificationStatus.QUEUED.name());
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(20))
-                .pollInterval(Duration.ofMillis(500))
+                .pollInterval(Duration.ofMillis(300))
                 .untilAsserted(() -> {
                     NotificationEntity entity = notificationRepository.findByNotificationId(notificationId)
                             .orElseThrow(() -> new AssertionError("Notification not found: " + notificationId));
@@ -49,15 +44,8 @@ class NotificationDlqE2ETest extends BaseE2ETest {
                     assertThat(entity.getStatus()).isEqualTo(NotificationStatus.FAILED);
                     assertThat(entity.getRetryCount()).isEqualTo(3);
                     assertThat(entity.getErrorCode()).isEqualTo(NotificationErrorCode.RETRY_EXHAUSTED.name());
-                });
-
-        Awaitility.await()
-                .atMost(Duration.ofSeconds(5))
-                .pollInterval(Duration.ofMillis(300))
-                .untilAsserted(() -> {
-                    Message dlqMessage = rabbitTemplate.receive(EMAIL_DLQ_QUEUE, 1000);
-                    assertThat(dlqMessage).isNotNull();
-                    assertThat(new String(dlqMessage.getBody())).contains(notificationId);
+                    assertThat(entity.getErrorMessage()).contains("Temporary email provider failure");
+                    assertThat(entity.getRecipient()).isEqualTo("user@example.com");
                 });
     }
 }

@@ -3,19 +3,20 @@ package com.example.notificationservice.integration.worker;
 import com.example.notificationservice.dto.NotificationMessage;
 import com.example.notificationservice.entity.NotificationEntity;
 import com.example.notificationservice.integration.BaseIntegrationTest;
-import com.example.notificationservice.model.NotificationChannel;
-import com.example.notificationservice.model.NotificationStatus;
 import com.example.notificationservice.repository.NotificationRepository;
+import com.example.notificationservice.support.TestDataFactory;
+import com.example.notificationservice.model.TestRabbitConstants;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.UUID;
 
+import static com.example.notificationservice.model.NotificationStatus.SENT;
+import static com.example.notificationservice.model.TestRabbitConstants.EMAIL_ROUTING_KEY;
+import static com.example.notificationservice.model.TestRabbitConstants.EXCHANGE;
+import static com.example.notificationservice.model.TestTemplateCodes.ORDER_CREATED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class EmailNotificationWorkerIntegrationTest extends BaseIntegrationTest {
@@ -28,34 +29,16 @@ class EmailNotificationWorkerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void shouldConsumeMessageAndMarkNotificationAsSent() {
-        String notificationId = "NTF-" + UUID.randomUUID();
+        String notificationId = TestDataFactory.randomNotificationId();
 
-        NotificationEntity entity = new NotificationEntity();
-        entity.setNotificationId(notificationId);
-        entity.setUserId("USR-77");
-        entity.setChannel(NotificationChannel.EMAIL);
-        entity.setRecipient("user@example.com");
-        entity.setTemplateCode("ORDER_CREATED");
-        entity.setPayloadJson("{\"orderId\":\"ORD-555\",\"amount\":1200}");
-        entity.setStatus(NotificationStatus.QUEUED);
-        entity.setRetryCount(0);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
-
+        NotificationEntity entity =
+                TestDataFactory.queuedEmailEntity(notificationId, ORDER_CREATED);
         notificationRepository.save(entity);
 
-        NotificationMessage message = new NotificationMessage();
-        message.setNotificationId(notificationId);
-        message.setUserId("USR-77");
-        message.setChannel(NotificationChannel.EMAIL);
-        message.setRecipient("user@example.com");
-        message.setTemplateCode("ORDER_CREATED");
-        message.setPayload(Map.of(
-                "orderId", "ORD-555",
-                "amount", 1200
-        ));
+        NotificationMessage message =
+                TestDataFactory.emailMessage(notificationId, ORDER_CREATED);
 
-        rabbitTemplate.convertAndSend("notification.exchange", "notification.email", message);
+        rabbitTemplate.convertAndSend(EXCHANGE, EMAIL_ROUTING_KEY, message);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(10))
@@ -64,7 +47,7 @@ class EmailNotificationWorkerIntegrationTest extends BaseIntegrationTest {
                     NotificationEntity updated = notificationRepository.findByNotificationId(notificationId)
                             .orElseThrow(() -> new AssertionError("Notification not found: " + notificationId));
 
-                    assertThat(updated.getStatus()).isEqualTo(NotificationStatus.SENT);
+                    assertThat(updated.getStatus()).isEqualTo(SENT);
                     assertThat(updated.getRetryCount()).isZero();
                     assertThat(updated.getErrorCode()).isNull();
                     assertThat(updated.getErrorMessage()).isNull();
